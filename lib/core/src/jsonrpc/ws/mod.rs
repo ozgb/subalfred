@@ -72,11 +72,19 @@ impl Initializer {
 
 	/// Initialize the WS stream.
 	pub async fn connect(self, uri: &str) -> Result<Ws> {
-		let (mut ws_tx, mut ws_rx) = tokio_tungstenite::connect_async(uri)
-			.await
-			.map_err(error::Generic::Tungstenite)?
-			.0
-			.split();
+		let (mut ws_tx, mut ws_rx) = tokio_tungstenite::connect_async_with_config(
+			uri,
+			Some(tokio_tungstenite::tungstenite::protocol::WebSocketConfig {
+				max_message_size: Some(usize::MAX),
+				max_frame_size: Some(usize::MAX),
+				..Default::default()
+			}),
+			false,
+		)
+		.await
+		.map_err(error::Generic::Tungstenite)?
+		.0
+		.split();
 		let (tx, rx) = mpsc::channel(self.concurrency_limit);
 
 		tokio::spawn(async move {
